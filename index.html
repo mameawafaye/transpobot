@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TranspoBot — Gestion de Transport</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bord:    #6b1a2a;
+  --bord2:   #8b2638;
+  --bord3:   #4a1020;
+  --cream:   #faf6ef;
+  --cream2:  #f0e8d8;
+  --cream3:  #e8dcc8;
+  --gold:    #c49a3c;
+  --gold2:   #e8b84b;
+  --text:    #2c1810;
+  --muted:   #8a7060;
+  --white:   #ffffff;
+  --green:   #2d6a4f;
+  --greenl:  #d8f3dc;
+  --red:     #922b21;
+  --redl:    #fde8e8;
+  --shadow:  0 4px 24px rgba(107,26,42,0.10);
+  --shadow2: 0 2px 10px rgba(107,26,42,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+header {
+  background: linear-gradient(135deg, var(--bord3) 0%, var(--bord) 60%, var(--bord2) 100%);
+  color: var(--cream); padding: 0 2.5rem; height: 68px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 20px rgba(74,16,32,0.4);
+}
+.logo { display: flex; align-items: center; gap: 1rem; }
+.logo-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: rgba(196,154,60,0.25); border: 1.5px solid var(--gold);
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+}
+.logo-name { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; }
+.logo-name span { color: var(--gold2); }
+.logo-sub { font-size: 0.7rem; opacity: .6; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+.status-pill {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: rgba(196,154,60,0.12); border: 1px solid rgba(196,154,60,0.3);
+  padding: 0.35rem 1rem; border-radius: 30px;
+  font-size: 0.72rem; color: var(--gold2); letter-spacing: .5px;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+nav {
+  background: var(--white); border-bottom: 2px solid var(--cream3);
+  display: flex; padding: 0 2.5rem; box-shadow: var(--shadow2);
+  overflow-x: auto;
+}
+nav button {
+  padding: 0.9rem 1.2rem; background: none; border: none;
+  font-family: 'Jost', sans-serif; font-size: 0.84rem; font-weight: 500;
+  color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent;
+  margin-bottom: -2px; transition: all .2s; white-space: nowrap;
+}
+nav button.active { color: var(--bord); border-bottom-color: var(--bord); font-weight: 600; }
+nav button:hover:not(.active) { color: var(--text); background: var(--cream); }
+
+.page { display: none; padding: 2rem 2.5rem; max-width: 1380px; margin: 0 auto; }
+.page.active { display: block; animation: fadeUp .3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.2rem; margin-bottom: 2rem; }
+.kpi {
+  background: var(--white); border-radius: 16px; padding: 1.4rem 1.5rem;
+  box-shadow: var(--shadow2); border: 1px solid var(--cream3);
+  display: flex; align-items: center; gap: 1rem;
+  transition: transform .2s, box-shadow .2s; position: relative; overflow: hidden;
+}
+.kpi::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+.kpi.k1::after { background: linear-gradient(90deg, var(--bord), var(--bord2)); }
+.kpi.k2::after { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+.kpi.k3::after { background: linear-gradient(90deg, var(--green), #40916c); }
+.kpi.k4::after { background: linear-gradient(90deg, var(--red), #c0392b); }
+.kpi:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.kpi-ico { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; }
+.kpi.k1 .kpi-ico { background: rgba(107,26,42,.08); }
+.kpi.k2 .kpi-ico { background: rgba(196,154,60,.10); }
+.kpi.k3 .kpi-ico { background: rgba(45,106,79,.08); }
+.kpi.k4 .kpi-ico { background: rgba(146,43,33,.08); }
+.kpi-val { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; line-height: 1; }
+.kpi-lbl { font-size: 0.72rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .6px; }
+
+.card { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow2); border: 1px solid var(--cream3); }
+.card-title {
+  font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700;
+  color: var(--bord); margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem; border-bottom: 1px solid var(--cream3);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+thead th {
+  padding: 0.65rem 1rem; text-align: left; font-size: 0.7rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); border-bottom: 2px solid var(--cream3);
+}
+tbody td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--cream2); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--cream); }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+.b-green  { background: var(--greenl); color: var(--green); }
+.b-red    { background: var(--redl);   color: var(--red); }
+.b-gold   { background: rgba(196,154,60,.15); color: #8a6820; }
+.b-gray   { background: var(--cream2); color: var(--muted); }
+.b-bord   { background: rgba(107,26,42,.1); color: var(--bord); }
+
+.chat-layout { display: grid; grid-template-columns: 270px 1fr; gap: 1.5rem; }
+.sug-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 0.9rem; font-weight: 600; }
+.sug-btn {
+  width: 100%; text-align: left; padding: 0.65rem 1rem;
+  background: var(--cream); border: 1px solid var(--cream3);
+  border-radius: 10px; color: var(--text); font-family: 'Jost', sans-serif;
+  font-size: 0.83rem; cursor: pointer; margin-bottom: 0.5rem; transition: all .15s;
+}
+.sug-btn:hover { background: rgba(107,26,42,.06); border-color: rgba(107,26,42,.2); color: var(--bord); }
+
+.chat-main { display: flex; flex-direction: column; gap: 1rem; }
+.chat-box {
+  height: 430px; overflow-y: auto; background: var(--cream);
+  border: 1px solid var(--cream3); border-radius: 14px; padding: 1.2rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.msg { display: flex; gap: 0.7rem; }
+.msg.user { flex-direction: row-reverse; }
+.av { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+.av.bot  { background: var(--bord); color: var(--cream); }
+.av.user { background: var(--gold); color: var(--white); }
+.bubble { max-width: 78%; padding: 0.8rem 1.1rem; border-radius: 14px; font-size: 0.87rem; line-height: 1.6; }
+.msg.bot  .bubble { background: var(--white); border: 1px solid var(--cream3); border-radius: 4px 14px 14px 14px; }
+.msg.user .bubble { background: var(--bord); color: var(--cream); border-radius: 14px 4px 14px 14px; }
+.sql-code {
+  background: var(--bord3); color: #e8c9a0;
+  font-family: 'Courier New', monospace; font-size: 0.73rem;
+  padding: 0.6rem 0.9rem; border-radius: 8px; margin-top: 0.6rem;
+  white-space: pre-wrap; word-break: break-all; border-left: 3px solid var(--gold);
+}
+.typing { display: flex; gap: 4px; align-items: center; }
+.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--bord); animation: bounce 1s infinite; }
+.typing span:nth-child(2) { animation-delay: .15s; }
+.typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+
+.input-wrap {
+  display: flex; gap: 0.7rem; background: var(--white);
+  border: 1.5px solid var(--cream3); border-radius: 14px;
+  padding: 0.5rem 0.5rem 0.5rem 1.2rem; transition: border-color .2s; box-shadow: var(--shadow2);
+}
+.input-wrap:focus-within { border-color: var(--bord); }
+.input-wrap input { flex: 1; background: none; border: none; outline: none; font-family: 'Jost', sans-serif; font-size: 0.9rem; color: var(--text); }
+.input-wrap input::placeholder { color: var(--muted); }
+.send-btn {
+  background: var(--bord); color: var(--cream); border: none; border-radius: 10px;
+  padding: 0.65rem 1.4rem; font-family: 'Jost', sans-serif; font-weight: 600;
+  font-size: 0.85rem; cursor: pointer; transition: all .2s;
+}
+.send-btn:hover { background: var(--bord2); }
+.send-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.results-card { display: none; }
+.results-card.show { display: block; }
+.count-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 0.7rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚌</div>
+    <div>
+      <div class="logo-name">Transpo<span>Bot</span></div>
+      <div class="logo-sub">Gestion de Transport Urbain </div>
+    </div>
+  </div>
+  <div class="status-pill"><div class="dot"></div> Système actif</div>
+</header>
+
+<nav>
+  <button class="active" onclick="showPage('dashboard',this)">📊 Tableau de bord</button>
+  <button onclick="showPage('chat',this)">💬 Assistant IA</button>
+  <button onclick="showPage('vehicules',this)">🚌 Véhicules</button>
+  <button onclick="showPage('chauffeurs',this)">👤 Chauffeurs</button>
+  <button onclick="showPage('trajets',this)">🛣️ Trajets</button>
+  <button onclick="showPage('lignes',this)">🗺️ Lignes</button>
+  <button onclick="showPage('tarifs',this)">💰 Tarifs</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="kpi-grid">
+    <div class="kpi k1"><div class="kpi-ico">🛣️</div><div><div class="kpi-val" id="k-trajets">—</div><div class="kpi-lbl">Trajets</div></div></div>
+    <div class="kpi k2"><div class="kpi-ico">👤</div><div><div class="kpi-val" id="k-chauffeurs">—</div><div class="kpi-lbl">Chauffeurs</div></div></div>
+    <div class="kpi k3"><div class="kpi-ico">🚌</div><div><div class="kpi-val" id="k-vehicules">—</div><div class="kpi-lbl">Véhicules</div></div></div>
+    <div class="kpi k4"><div class="kpi-ico">⚠️</div><div><div class="kpi-val" id="k-incidents">—</div><div class="kpi-lbl">Incidents</div></div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">🚌 Flotte de véhicules</div>
+      <div class="table-wrap" id="dash-vehicules"><p style="color:var(--muted)">Chargement...</p></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🛣️ Derniers trajets</div>
+      <div class="table-wrap" id="dash-trajets"><p style="color:var(--muted)">Chargement...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="page-chat" class="page">
+  <div class="chat-layout">
+    <div>
+      <div class="card">
+        <div class="sug-title">💡 Questions suggérées</div>
+        <button class="sug-btn" onclick="ask('Combien de chauffeurs avons-nous ?')">👤 Nombre de chauffeurs</button>
+        <button class="sug-btn" onclick="ask('Quels véhicules sont en maintenance ?')">🔧 Véhicules en maintenance</button>
+        <button class="sug-btn" onclick="ask('Liste tous les trajets')">🛣️ Tous les trajets</button>
+        <button class="sug-btn" onclick="ask('Quels incidents ont eu lieu ?')">⚠️ Incidents signalés</button>
+        <button class="sug-btn" onclick="ask('Quel véhicule a le plus de kilomètres ?')">📍 Max kilométrage</button>
+        <button class="sug-btn" onclick="ask('Combien de véhicules sont actifs ?')">✅ Véhicules actifs</button>
+        <button class="sug-btn" onclick="ask('Quelle ligne a le tarif le plus élevé ?')">💰 Tarif le plus élevé</button>
+        <button class="sug-btn" onclick="ask('Liste toutes les lignes disponibles')">🗺️ Toutes les lignes</button>
+        <button class="sug-btn" onclick="ask('Quel chauffeur a fait le plus de trajets ?')">🏆 Meilleur chauffeur</button>
+      </div>
+    </div>
+    <div class="chat-main">
+      <div class="card" style="padding:1rem">
+        <div class="chat-box" id="chat-box">
+          <div class="msg bot">
+            <div class="av bot">🤖</div>
+            <div class="bubble">Bonjour ! Je suis <strong>TranspoBot</strong>, votre assistant IA.<br>Posez-moi n'importe quelle question sur votre flotte, vos chauffeurs ou vos trajets !</div>
+          </div>
+        </div>
+        <div class="input-wrap" style="margin-top:0.8rem">
+          <input type="text" id="user-input" placeholder="Ex : Quel chauffeur a fait le plus de trajets ?" onkeypress="if(event.key==='Enter') sendMessage()">
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">Envoyer ➤</button>
+        </div>
+      </div>
+      <div class="card results-card" id="results-card">
+        <div class="card-title">📋 Résultats</div>
+        <div class="table-wrap" id="results-table"></div>
+        <div class="count-lbl" id="count-lbl"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VÉHICULES -->
+<div id="page-vehicules" class="page">
+  <div class="card">
+    <div class="card-title">🚌 Liste des véhicules</div>
+    <div class="table-wrap" id="vehicules-table"><p style="color:var(--muted)">Chargement...</p></div>
+  </div>
+</div>
+
+<!-- CHAUFFEURS -->
+<div id="page-chauffeurs" class="page">
+  <div class="card">
+    <div class="card-title">👤 Liste des chauffeurs</div>
+    <div class="table-wrap" id="chauffeurs-table"><p style="color:var(--muted)">Chargement...</p></div>
+  </div>
+</div>
+
+<!-- TRAJETS -->
+<div id="page-trajets" class="page">
+  <div class="card">
+    <div class="card-title">🛣️ Liste des trajets</div>
+    <div class="table-wrap" id="trajets-table"><p style="color:var(--muted)">Chargement...</p></div>
+  </div>
+</div>
+
+<!-- LIGNES -->
+<div id="page-lignes" class="page">
+  <div class="card">
+    <div class="card-title">🗺️ Liste des lignes</div>
+    <div class="table-wrap" id="lignes-table"><p style="color:var(--muted)">Chargement...</p></div>
+  </div>
+</div>
+
+<!-- TARIFS -->
+<div id="page-tarifs" class="page">
+  <div class="card">
+    <div class="card-title">💰 Grille tarifaire</div>
+    <div class="table-wrap" id="tarifs-table"><p style="color:var(--muted)">Chargement...</p></div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'vehicules') loadVehicules();
+  if (id === 'chauffeurs') loadChauffeurs();
+  if (id === 'trajets') loadTrajets();
+  if (id === 'lignes') loadLignes();
+  if (id === 'tarifs') loadTarifs();
+}
+
+function badge(val, map) {
+  const [cls, label] = map[val] || ['b-gray', val];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+async function loadStats() {
+  try {
+    const d = await fetch(`${API}/dashboard`).then(r => r.json());
+    document.getElementById('k-trajets').textContent    = d.total_trajets;
+    document.getElementById('k-chauffeurs').textContent = d.total_chauffeurs;
+    document.getElementById('k-vehicules').textContent  = d.total_vehicules;
+    document.getElementById('k-incidents').textContent  = d.total_incidents;
+  } catch(e) {}
+}
+
+async function loadDashVehicules() {
+  try {
+    const data = await fetch(`${API}/vehicules`).then(r => r.json());
+    const rows = data.map(v => `<tr>
+      <td><strong>${v.immatriculation}</strong></td>
+      <td>${badge(v.statut, {actif:['b-green','Actif'],maintenance:['b-gold','Maintenance'],hors_service:['b-red','Hors service']})}</td>
+      <td>${Number(v.kilometrage).toLocaleString('fr')} km</td>
+    </tr>`).join('');
+    document.getElementById('dash-vehicules').innerHTML =
+      `<table><thead><tr><th>Immat.</th><th>Statut</th><th>Kilométrage</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(e) {}
+}
+
+async function loadDashTrajets() {
+  try {
+    const data = await fetch(`${API}/trajets`).then(r => r.json());
+    const rows = data.slice(0,6).map(t => `<tr>
+      <td>${t.nom} ${t.prenom}</td>
+      <td>${t.immatriculation}</td>
+      <td>${new Date(t.date_heure_depart).toLocaleDateString('fr')}</td>
+      <td>${badge(t.statut, {termine:['b-green','Terminé'],en_cours:['b-bord','En cours'],planifie:['b-gray','Planifié']})}</td>
+    </tr>`).join('');
+    document.getElementById('dash-trajets').innerHTML =
+      `<table><thead><tr><th>Chauffeur</th><th>Véhicule</th><th>Date</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(e) {}
+}
+
+async function loadVehicules() {
+  const data = await fetch(`${API}/vehicules`).then(r => r.json());
+  const rows = data.map(v => `<tr>
+    <td><strong>${v.immatriculation}</strong></td>
+    <td>${badge(v.statut, {actif:['b-green','Actif'],maintenance:['b-gold','Maintenance'],hors_service:['b-red','Hors service']})}</td>
+    <td>${Number(v.kilometrage).toLocaleString('fr')} km</td>
+  </tr>`).join('');
+  document.getElementById('vehicules-table').innerHTML =
+    `<table><thead><tr><th>Immatriculation</th><th>Statut</th><th>Kilométrage</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function loadChauffeurs() {
+  const data = await fetch(`${API}/chauffeurs`).then(r => r.json());
+  const rows = data.map(c => `<tr>
+    <td><strong>${c.nom}</strong></td>
+    <td>${c.prenom}</td>
+    <td>${c.telephone || '—'}</td>
+  </tr>`).join('');
+  document.getElementById('chauffeurs-table').innerHTML =
+    `<table><thead><tr><th>Nom</th><th>Prénom</th><th>Téléphone</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function loadTrajets() {
+  const data = await fetch(`${API}/trajets`).then(r => r.json());
+  const rows = data.map(t => `<tr>
+    <td>${t.nom} ${t.prenom}</td>
+    <td>${t.immatriculation}</td>
+    <td>${new Date(t.date_heure_depart).toLocaleDateString('fr')}</td>
+    <td>${badge(t.statut, {termine:['b-green','Terminé'],en_cours:['b-bord','En cours'],planifie:['b-gray','Planifié']})}</td>
+  </tr>`).join('');
+  document.getElementById('trajets-table').innerHTML =
+    `<table><thead><tr><th>Chauffeur</th><th>Véhicule</th><th>Date départ</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function loadLignes() {
+  try {
+    const data = await fetch(`${API}/lignes`).then(r => r.json());
+    const rows = data.map(l => `<tr>
+      <td><strong>${l.nom}</strong></td>
+      <td>${l.depart}</td>
+      <td>${l.arrivee}</td>
+    </tr>`).join('');
+    document.getElementById('lignes-table').innerHTML =
+      `<table><thead><tr><th>Nom</th><th>Départ</th><th>Arrivée</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(e) {
+    document.getElementById('lignes-table').innerHTML = '<p style="color:var(--muted)">Erreur de chargement.</p>';
+  }
+}
+
+async function loadTarifs() {
+  try {
+    const data = await fetch(`${API}/tarifs`).then(r => r.json());
+    const rows = data.map(t => `<tr>
+      <td>${t.ligne_nom || 'Ligne ' + t.ligne_id}</td>
+      <td><strong>${Number(t.prix).toLocaleString('fr')} FCFA</strong></td>
+    </tr>`).join('');
+    document.getElementById('tarifs-table').innerHTML =
+      `<table><thead><tr><th>Ligne</th><th>Prix</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(e) {
+    document.getElementById('tarifs-table').innerHTML = '<p style="color:var(--muted)">Erreur de chargement.</p>';
+  }
+}
+
+function ask(q) {
+  showPage('chat', document.querySelectorAll('nav button')[1]);
+  document.getElementById('user-input').value = q;
+  setTimeout(sendMessage, 100);
+}
+
+function addMsg(role, html, sql = null) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const av = role === 'bot' ? '<div class="av bot">🤖</div>' : '<div class="av user">👤</div>';
+  const sqlHtml = sql ? `<div class="sql-code">${sql}</div>` : '';
+  div.innerHTML = `${av}<div class="bubble">${html}${sqlHtml}</div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const btn   = document.getElementById('send-btn');
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = '';
+  btn.disabled = true;
+
+  addMsg('user', question);
+  const loadDiv = addMsg('bot', '<div class="typing"><span></span><span></span><span></span></div>');
+
+  try {
+    const r = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ question })
+    });
+    const data = await r.json();
+    loadDiv.remove();
+    const countTxt = data.count > 0
+      ? ` <em style="font-size:.8rem;opacity:.7">(${data.count} résultat${data.count>1?'s':''})</em>` : '';
+    addMsg('bot', (data.reponse || '') + countTxt, data.sql);
+
+    if (data.data && data.data.length > 0) {
+      const rc = document.getElementById('results-card');
+      rc.classList.add('show');
+      const keys = Object.keys(data.data[0]);
+      const rows = data.data.map(row =>
+        `<tr>${keys.map(k => `<td>${row[k] ?? '—'}</td>`).join('')}</tr>`
+      ).join('');
+      document.getElementById('results-table').innerHTML =
+        `<table><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+      document.getElementById('count-lbl').textContent =
+        `${data.count} enregistrement${data.count>1?'s':''} trouvé${data.count>1?'s':''}`;
+    }
+  } catch(e) {
+    loadDiv.remove();
+    addMsg('bot', '❌ Erreur de connexion. Vérifiez que le serveur est lancé.');
+  }
+  btn.disabled = false;
+  input.focus();
+}
+
+loadStats();
+loadDashVehicules();
+loadDashTrajets();
+</script>
+</body>
+</html>
