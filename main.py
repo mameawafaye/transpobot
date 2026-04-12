@@ -20,10 +20,12 @@ app.add_middleware(
 # Connexion MySQL
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="bintkhadija",
-        database="transpobot"
+        host=os.environ.get("DB_HOST", "localhost"),
+        port=int(os.environ.get("DB_PORT", 3306)),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", "bintkhadija"),
+        database=os.environ.get("DB_NAME", "transpobot"),
+        ssl_disabled=False
     )
 
 # Clé Groq
