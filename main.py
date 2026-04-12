@@ -5,6 +5,8 @@ import mysql.connector
 import httpx
 import re
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI()
 
@@ -25,7 +27,8 @@ def get_db_connection():
     )
 
 # Clé Groq
-GROQ_API_KEY = "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"  # ← mets ta vraie clé ici
+import os
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 # Schéma BDD pour le prompt
 DB_SCHEMA = """
