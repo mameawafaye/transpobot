@@ -20,9 +20,12 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="bintkhadija",   # ← remplace ici
+        password="bintkhadija",
         database="transpobot"
     )
+
+# Clé Groq
+GROQ_API_KEY = "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"  # ← mets ta vraie clé ici
 
 # Schéma BDD pour le prompt
 DB_SCHEMA = """
@@ -142,51 +145,49 @@ class Question(BaseModel):
 
 @app.post("/chat")
 async def chat(q: Question):
-    # 1. Envoyer la question à Ollama
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:11434/api/chat",
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
             json={
-                "model": "llama3.2",
+                "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user",   "content": q.question}
                 ],
-                "stream": False
+                "temperature": 0,
+                "max_tokens": 500
             },
-            timeout=60
+            timeout=30
         )
-    
-    content = response.json()["message"]["content"].strip()
-    
-    # 2. Nettoyer la réponse (enlever ```json si présent)
+
+    content = response.json()["choices"][0]["message"]["content"].strip()
     content = re.sub(r'```json\s*', '', content)
     content = re.sub(r'```\s*', '', content)
-    
-    # 3. Parser le JSON
+
     match = re.search(r'\{.*\}', content, re.DOTALL)
     if not match:
         return {"reponse": content, "data": [], "sql": None}
-    
+
     llm = json.loads(match.group())
     sql = llm.get("sql")
     explication = llm.get("explication", "")
-    
-    # 4. Si pas de SQL, retourner juste l'explication
+
     if not sql:
         return {"reponse": explication, "data": [], "sql": None}
-    
-    # 5. Sécurité : bloquer tout ce qui n'est pas SELECT
+
     if not sql.strip().upper().startswith("SELECT"):
         return {"reponse": "Requête non autorisée.", "data": [], "sql": None}
-    
-    # 6. Exécuter le SQL
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(sql)
     data = cursor.fetchall()
     conn.close()
-    
+
     return {
         "reponse": explication,
         "data": data,
